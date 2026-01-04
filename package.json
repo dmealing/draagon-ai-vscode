@@ -1,0 +1,370 @@
+{
+  "name": "draagon-ai",
+  "displayName": "Draagon AI",
+  "description": "AI-powered coding assistant with intelligent multi-LLM routing, shared memory, and custom agents",
+  "version": "0.1.0",
+  "publisher": "draagon",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Draagon/draagon-ai"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "claude",
+    "groq",
+    "coding assistant",
+    "memory",
+    "agents"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "draagon.openChat",
+        "title": "Open Draagon Chat",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.newSession",
+        "title": "New Chat Session",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.runCodeReview",
+        "title": "Run Code Review",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.runSecurityScan",
+        "title": "Run Security Scan",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.openMemoryBrowser",
+        "title": "Open Memory Browser",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.showStats",
+        "title": "Show Usage Statistics",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.renameSession",
+        "title": "Rename Current Session",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.resumeSession",
+        "title": "Resume Previous Session",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.installPlugin",
+        "title": "Install Plugin",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.managePlugins",
+        "title": "Manage Plugins",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.manageMcpServers",
+        "title": "Manage MCP Servers",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.runPrReview",
+        "title": "Run PR Review",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.processDocument",
+        "title": "Process Document",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.launchAgentSwarm",
+        "title": "Launch Agent Swarm",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.launchBrowser",
+        "title": "Launch Browser",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.closeBrowser",
+        "title": "Close Browser",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.connectFigma",
+        "title": "Connect Figma",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.importFigmaDesign",
+        "title": "Import Figma Design",
+        "category": "Draagon"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "draagon.openChat",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d"
+      },
+      {
+        "command": "draagon.runCodeReview",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "draagon",
+          "title": "Draagon AI",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "draagon": [
+        {
+          "type": "webview",
+          "id": "draagon.chatView",
+          "name": "Chat"
+        },
+        {
+          "id": "draagon.agentsView",
+          "name": "Agents"
+        },
+        {
+          "id": "draagon.memoryView",
+          "name": "Memory"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Draagon AI",
+      "properties": {
+        "draagon.claude.path": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to Claude Code CLI executable"
+        },
+        "draagon.claude.model": {
+          "type": "string",
+          "default": "default",
+          "description": "Claude model to use (default, sonnet, opus)"
+        },
+        "draagon.routing.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable intelligent multi-LLM request routing"
+        },
+        "draagon.groq.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Groq API key for fast-path routing"
+        },
+        "draagon.groq.model": {
+          "type": "string",
+          "default": "llama-3.1-8b-instant",
+          "description": "Groq model for fast queries"
+        },
+        "draagon.memory.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Draagon Memory integration"
+        },
+        "draagon.memory.serverCommand": {
+          "type": "string",
+          "default": "python -m draagon_ai.mcp.server",
+          "description": "Command to start Memory MCP server"
+        },
+        "draagon.memory.autoContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically include relevant memories in context"
+        },
+        "draagon.agents.codeReview.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Code Review agent"
+        },
+        "draagon.agents.securityScan.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Security Scanner agent"
+        },
+        "draagon.agents.securityScan.onSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run security scan automatically on file save"
+        },
+        "draagon.agents.custom": {
+          "type": "array",
+          "default": [],
+          "description": "Custom agent definitions"
+        },
+        "draagon.ui.showTokenCost": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show token usage and cost estimates"
+        },
+        "draagon.ui.showRoutingInfo": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show which LLM handled each request"
+        },
+        "draagon.backup.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic checkpoints before AI makes changes"
+        },
+        "draagon.backup.maxCommits": {
+          "type": "number",
+          "default": 50,
+          "minimum": 5,
+          "maximum": 500,
+          "description": "Maximum number of checkpoints to keep"
+        },
+        "draagon.backup.gcInterval": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Run git garbage collection every N checkpoints"
+        },
+        "draagon.backup.autoCheckpoint": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically create checkpoints before Claude makes changes"
+        },
+        "draagon.plugins.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable plugin system"
+        },
+        "draagon.plugins.autoUpdate": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically update plugins"
+        },
+        "draagon.mcp.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-start MCP servers on extension activation"
+        },
+        "draagon.mcp.servers": {
+          "type": "array",
+          "default": [],
+          "description": "List of MCP servers to manage"
+        },
+        "draagon.orchestrator.maxAgents": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum number of parallel agents in swarm"
+        },
+        "draagon.orchestrator.defaultModel": {
+          "type": "string",
+          "default": "claude-3.5-sonnet",
+          "description": "Default model for agent swarm"
+        },
+        "draagon.browser.chromePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Chrome executable for browser control"
+        },
+        "draagon.browser.headless": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run browser in headless mode"
+        },
+        "draagon.figma.accessToken": {
+          "type": "string",
+          "default": "",
+          "description": "Figma Personal Access Token"
+        },
+        "draagon.figma.defaultFramework": {
+          "type": "string",
+          "enum": ["react", "vue", "svelte", "html", "tailwind"],
+          "default": "react",
+          "description": "Default framework for Figma code generation"
+        },
+        "draagon.thinking.showChainOfThought": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show chain-of-thought reasoning in UI"
+        },
+        "draagon.prReview.defaultAgents": {
+          "type": "array",
+          "default": ["security", "error-handling", "type-safety"],
+          "description": "Default agents to run for PR review"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "draagon.runCodeReview",
+          "group": "draagon@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "draagon.runSecurityScan",
+          "group": "draagon@2",
+          "when": "editorHasSelection"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.96.0",
+    "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "eslint": "^9.17.0",
+    "glob": "^13.0.0",
+    "mocha": "^11.7.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.51.0"
+  },
+  "dependencies": {
+    "groq-sdk": "^0.8.0",
+    "marked": "^15.0.4",
+    "ws": "^8.18.0"
+  }
+}
