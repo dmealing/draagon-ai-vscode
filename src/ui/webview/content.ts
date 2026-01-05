@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 
 export function getWebviewContent(
     webview: vscode.Webview,
-    extensionUri: vscode.Uri
+    extensionUri: vscode.Uri,
+    version?: string
 ): string {
     const nonce = getNonce();
+    const displayVersion = version || 'dev';
 
     // Get URI for the icon image
     const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'icon.png'));
@@ -26,7 +28,7 @@ export function getWebviewContent(
             <div class="header-left">
                 <img class="logo" src="${iconUri}" alt="Draagon AI">
                 <span class="title">Draagon AI Code</span>
-                <span class="version" id="version">v0.2.0</span>
+                <span class="version" id="version">v${displayVersion}</span>
                 <span class="plan-mode-badge hidden" id="planModeBadge">📋 Plan Mode</span>
             </div>
             <div class="header-center">
@@ -104,6 +106,35 @@ export function getWebviewContent(
                     </button>
                 </div>
                 <div class="toolbar-right">
+                    <div class="permission-wrapper" style="position: relative;">
+                        <button class="toolbar-btn permission-btn" id="permissionBtn" title="Permission Mode" data-mode="acceptEdits">
+                            <span class="permission-icon" id="permissionIcon">🛡️</span>
+                            <span class="permission-label" id="permissionLabel">Safe</span>
+                        </button>
+                        <div class="permission-dropdown" id="permissionDropdown">
+                            <div class="permission-option" data-mode="acceptEdits">
+                                <span class="option-icon">🛡️</span>
+                                <div class="option-info">
+                                    <div class="option-name">Safe Mode</div>
+                                    <div class="option-desc">Auto-approve file edits only</div>
+                                </div>
+                            </div>
+                            <div class="permission-option" data-mode="bypassPermissions">
+                                <span class="option-icon">🚀</span>
+                                <div class="option-info">
+                                    <div class="option-name">YOLO Mode</div>
+                                    <div class="option-desc">Bypass ALL permissions</div>
+                                </div>
+                            </div>
+                            <div class="permission-option" data-mode="dontAsk">
+                                <span class="option-icon">🔒</span>
+                                <div class="option-info">
+                                    <div class="option-name">Strict Mode</div>
+                                    <div class="option-desc">Skip unapproved tools silently</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="toggle-group">
                         <button class="toggle-btn" id="planModeToggle" title="Plan First">
                             <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
@@ -118,6 +149,11 @@ export function getWebviewContent(
             </div>
             <div class="input-container">
                 <div class="input-attachments hidden" id="inputAttachments"></div>
+                <!-- @-Mentions autocomplete popup -->
+                <div class="mention-popup" id="mentionPopup">
+                    <div class="mention-header" id="mentionHeader">Files</div>
+                    <div class="mention-list" id="mentionList"></div>
+                </div>
                 <textarea
                     id="input"
                     placeholder="Ask Draagon anything... (/ for commands, @ for files)"
@@ -859,7 +895,13 @@ function getStyles(): string {
             font-family: var(--vscode-editor-font-family);
             font-size: 12px;
             padding: 4px 8px;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+        }
+
+        .message.tool-container {
+            padding: 0;
+            margin-bottom: 2px;
+            background: transparent;
         }
 
         .message.thinking {
@@ -886,15 +928,46 @@ function getStyles(): string {
             margin-bottom: 4px;
         }
 
-        /* Loading/Thinking Indicator */
+        /* Loading/Thinking Indicator - Enhanced */
         .loading-indicator {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            margin-bottom: 6px;
-            color: var(--text-secondary);
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
             font-size: 13px;
+            animation: loadingFadeIn 0.3s ease;
+        }
+
+        @keyframes loadingFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-indicator .loading-icon {
+            font-size: 18px;
+            animation: loadingBounce 1s infinite;
+        }
+
+        @keyframes loadingBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .loading-indicator .loading-text {
+            flex: 1;
+        }
+
+        .loading-indicator .loading-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .loading-dots {
@@ -918,6 +991,12 @@ function getStyles(): string {
             0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
             40% { transform: scale(1); opacity: 1; }
         }
+
+        /* Loading phases */
+        .loading-indicator[data-phase="connecting"] .loading-icon::before { content: '🔌'; }
+        .loading-indicator[data-phase="thinking"] .loading-icon::before { content: '🧠'; }
+        .loading-indicator[data-phase="writing"] .loading-icon::before { content: '✍️'; }
+        .loading-indicator[data-phase="tool"] .loading-icon::before { content: '🔧'; }
 
         /* REQ-012: Enhanced markdown rendering styles */
         .inline-code {
@@ -1087,7 +1166,7 @@ function getStyles(): string {
 
         /* REQ-012: Enhanced tool use display */
         .tool-block {
-            margin: 8px 0;
+            margin: 4px 0;
             border-radius: 6px;
             overflow: hidden;
             background: rgba(59, 130, 246, 0.05);
@@ -1098,7 +1177,7 @@ function getStyles(): string {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 12px;
+            padding: 6px 10px;
             background: rgba(59, 130, 246, 0.1);
             cursor: pointer;
             user-select: none;
@@ -1173,6 +1252,60 @@ function getStyles(): string {
             margin: 0;
             max-height: 200px;
             overflow-y: auto;
+        }
+
+        .tool-result.collapsed .tool-result-content {
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tool-result.collapsed .tool-result-content::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+            pointer-events: none;
+        }
+
+        .tool-result-expand {
+            display: none;
+            margin-top: 8px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tool-result.collapsed .tool-result-expand {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tool-result-expand:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .tool-result-stats {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .tool-result-stat {
+            display: flex;
+            align-items: center;
+            gap: 3px;
         }
 
         /* Background agent/Task display */
@@ -1269,6 +1402,54 @@ function getStyles(): string {
             font-size: 11px;
             color: var(--text-secondary);
             white-space: pre-wrap;
+        }
+
+        /* Error type specific colors */
+        .error-block[data-type="rate-limit"] {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .error-block[data-type="rate-limit"] .error-type {
+            background: rgba(245, 158, 11, 0.2);
+        }
+        .error-block[data-type="timeout"] {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        .error-block[data-type="timeout"] .error-type {
+            background: rgba(139, 92, 246, 0.2);
+        }
+        .error-block[data-type="network"] {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        .error-block[data-type="network"] .error-type {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .error-suggestion {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid rgba(34, 197, 94, 0.5);
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .error-retry-btn {
+            margin-top: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .error-retry-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
         }
 
         /* REQ-012: Collapsible thinking blocks */
@@ -1543,6 +1724,105 @@ function getStyles(): string {
             background: var(--accent);
             border-color: var(--accent);
             color: white;
+        }
+
+        /* Permission button styles */
+        .permission-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+
+        .permission-btn .permission-icon {
+            font-size: 12px;
+        }
+
+        .permission-btn .permission-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .permission-btn[data-mode="acceptEdits"] {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.4);
+            color: #22c55e;
+        }
+
+        .permission-btn[data-mode="bypassPermissions"] {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+
+        .permission-btn[data-mode="dontAsk"] {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #3b82f6;
+        }
+
+        /* Permission dropdown */
+        .permission-dropdown {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 4px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .permission-dropdown.visible {
+            display: block;
+        }
+
+        .permission-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .permission-option:last-child {
+            border-bottom: none;
+        }
+
+        .permission-option:hover {
+            background: var(--bg-secondary);
+        }
+
+        .permission-option.selected {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .permission-option .option-icon {
+            font-size: 16px;
+        }
+
+        .permission-option .option-info {
+            flex: 1;
+        }
+
+        .permission-option .option-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .permission-option .option-desc {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 2px;
         }
 
         .input-attachments {
@@ -2006,6 +2286,100 @@ function getStyles(): string {
 
         .btn-secondary:hover {
             border-color: var(--accent);
+        }
+
+        /* @-Mentions Autocomplete Popup */
+        .mention-popup {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+
+        .mention-popup.visible {
+            display: block;
+            animation: mentionSlideIn 0.15s ease;
+        }
+
+        @keyframes mentionSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mention-header {
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        .mention-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .mention-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .mention-item:hover,
+        .mention-item.selected {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .mention-item.selected {
+            border-left: 2px solid var(--accent);
+        }
+
+        .mention-item-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .mention-item-text {
+            flex: 1;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mention-item-path {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .mention-item-type {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+
+        .mention-empty {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
         }
 
         /* REQ-001: Permission Dialog */
@@ -2569,6 +2943,10 @@ function getScript(): string {
         const slashCmdBtn = document.getElementById('slashCmdBtn');
         const filePickerBtn = document.getElementById('filePickerBtn');
         const imageBtn = document.getElementById('imageBtn');
+        const permissionBtn = document.getElementById('permissionBtn');
+        const permissionDropdown = document.getElementById('permissionDropdown');
+        const permissionIcon = document.getElementById('permissionIcon');
+        const permissionLabel = document.getElementById('permissionLabel');
         const planModeToggle = document.getElementById('planModeToggle');
         const thinkingModeToggle = document.getElementById('thinkingModeToggle');
         const thinkingModeLabel = document.getElementById('thinkingModeLabel');
@@ -2593,6 +2971,7 @@ function getScript(): string {
         let checkpoints = [];
         let currentModel = 'claude-sonnet-4';
         let currentThinkingMode = 'default';
+        let currentPermissionMode = 'acceptEdits';
         let planModeActive = false;
         let attachedFiles = [];
         let attachedImages = [];
@@ -3221,6 +3600,54 @@ function getScript(): string {
             vscode.postMessage({ type: 'attachImage' });
         });
 
+        // Permission mode toggle
+        permissionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            permissionDropdown.classList.toggle('visible');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!permissionBtn.contains(e.target) && !permissionDropdown.contains(e.target)) {
+                permissionDropdown.classList.remove('visible');
+            }
+        });
+
+        // Permission option selection
+        permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                const mode = opt.dataset.mode;
+                setPermissionMode(mode);
+                permissionDropdown.classList.remove('visible');
+            });
+        });
+
+        function setPermissionMode(mode) {
+            currentPermissionMode = mode;
+            permissionBtn.dataset.mode = mode;
+
+            const modes = {
+                'acceptEdits': { icon: '🛡️', label: 'Safe' },
+                'bypassPermissions': { icon: '🚀', label: 'YOLO' },
+                'dontAsk': { icon: '🔒', label: 'Strict' }
+            };
+
+            const config = modes[mode] || modes.acceptEdits;
+            permissionIcon.textContent = config.icon;
+            permissionLabel.textContent = config.label;
+
+            // Update selected state in dropdown
+            permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.mode === mode);
+            });
+
+            // Send to extension
+            vscode.postMessage({ type: 'setPermissionMode', mode: mode });
+        }
+
+        // Initialize permission mode display
+        setPermissionMode(currentPermissionMode);
+
         planModeToggle.addEventListener('click', () => {
             planModeActive = !planModeActive;
             planModeToggle.classList.toggle('active', planModeActive);
@@ -3510,13 +3937,198 @@ function getScript(): string {
         inputEl.addEventListener('input', () => {
             inputEl.style.height = 'auto';
             inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
+
+            // @-mentions autocomplete
+            checkForMentions();
         });
+
+        // @-mentions state
+        const mentionPopup = document.getElementById('mentionPopup');
+        const mentionList = document.getElementById('mentionList');
+        const mentionHeader = document.getElementById('mentionHeader');
+        let mentionActive = false;
+        let mentionStartPos = -1;
+        let mentionSelectedIndex = 0;
+        let mentionItems = [];
+
+        // Cache for files/functions (populated on first @)
+        let fileCache = [];
+        let functionCache = [];
+
+        function checkForMentions() {
+            const text = inputEl.value;
+            const cursorPos = inputEl.selectionStart;
+
+            // Find @ before cursor
+            const beforeCursor = text.substring(0, cursorPos);
+            const atMatch = beforeCursor.match(/@([\\w./\\-]*)$/);
+
+            if (atMatch) {
+                mentionActive = true;
+                mentionStartPos = cursorPos - atMatch[1].length - 1;
+                const query = atMatch[1].toLowerCase();
+
+                // Request file/function list if cache is empty
+                if (fileCache.length === 0) {
+                    vscode.postMessage({ type: 'getMentionItems' });
+                }
+
+                // Filter and show matches
+                filterMentionItems(query);
+            } else {
+                hideMentionPopup();
+            }
+        }
+
+        function filterMentionItems(query) {
+            mentionItems = [];
+
+            // Filter files
+            const matchingFiles = fileCache
+                .filter(f => f.name.toLowerCase().includes(query) || f.path.toLowerCase().includes(query))
+                .slice(0, 5);
+
+            // Filter functions
+            const matchingFunctions = functionCache
+                .filter(f => f.name.toLowerCase().includes(query))
+                .slice(0, 5);
+
+            if (matchingFiles.length > 0) {
+                mentionItems.push(...matchingFiles.map(f => ({ type: 'file', ...f })));
+            }
+            if (matchingFunctions.length > 0) {
+                mentionItems.push(...matchingFunctions.map(f => ({ type: 'function', ...f })));
+            }
+
+            if (mentionItems.length > 0) {
+                showMentionPopup();
+            } else {
+                hideMentionPopup();
+            }
+        }
+
+        function showMentionPopup() {
+            mentionList.innerHTML = '';
+            mentionSelectedIndex = 0;
+
+            mentionItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'mention-item' + (index === mentionSelectedIndex ? ' selected' : '');
+                div.dataset.index = index;
+
+                const icon = item.type === 'file' ? '📄' : '🔧';
+                const name = item.name;
+                const detail = item.type === 'file' ? item.path : (item.file + ':' + item.line);
+
+                div.innerHTML =
+                    '<span class="mention-item-icon">' + icon + '</span>' +
+                    '<span class="mention-item-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="mention-item-detail">' + escapeHtml(detail) + '</span>';
+
+                div.addEventListener('click', () => selectMention(index));
+                div.addEventListener('mouseenter', () => {
+                    mentionSelectedIndex = index;
+                    updateMentionSelection();
+                });
+
+                mentionList.appendChild(div);
+            });
+
+            // Update header based on items
+            const hasFiles = mentionItems.some(i => i.type === 'file');
+            const hasFunctions = mentionItems.some(i => i.type === 'function');
+            if (hasFiles && hasFunctions) {
+                mentionHeader.textContent = 'Files & Functions';
+            } else if (hasFiles) {
+                mentionHeader.textContent = 'Files';
+            } else {
+                mentionHeader.textContent = 'Functions';
+            }
+
+            mentionPopup.classList.add('visible');
+        }
+
+        function hideMentionPopup() {
+            mentionActive = false;
+            mentionStartPos = -1;
+            mentionPopup.classList.remove('visible');
+        }
+
+        function updateMentionSelection() {
+            const items = mentionList.querySelectorAll('.mention-item');
+            items.forEach((item, i) => {
+                item.classList.toggle('selected', i === mentionSelectedIndex);
+            });
+        }
+
+        function selectMention(index) {
+            const item = mentionItems[index];
+            if (!item) return;
+
+            const text = inputEl.value;
+            const before = text.substring(0, mentionStartPos);
+            const after = text.substring(inputEl.selectionStart);
+
+            // Insert the mention
+            const mention = item.type === 'file'
+                ? '@' + item.path
+                : '@' + item.name + '(' + item.file + ':' + item.line + ')';
+
+            inputEl.value = before + mention + ' ' + after;
+            inputEl.selectionStart = inputEl.selectionEnd = before.length + mention.length + 1;
+            inputEl.focus();
+
+            hideMentionPopup();
+        }
+
+        // Handle mention items response from extension
+        function handleMentionItems(data) {
+            if (data.files) fileCache = data.files;
+            if (data.functions) functionCache = data.functions;
+
+            // Re-filter if mention is active
+            if (mentionActive) {
+                const text = inputEl.value;
+                const cursorPos = inputEl.selectionStart;
+                const beforeCursor = text.substring(0, cursorPos);
+                const atMatch = beforeCursor.match(/@([\\w./\\-]*)$/);
+                if (atMatch) {
+                    filterMentionItems(atMatch[1].toLowerCase());
+                }
+            }
+        }
 
         // Track processing state
         let isCurrentlyProcessing = false;
 
         // Send on Enter (Shift+Enter for newline)
         inputEl.addEventListener('keydown', (e) => {
+            // Handle mention navigation
+            if (mentionActive) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    mentionSelectedIndex = Math.min(mentionSelectedIndex + 1, mentionItems.length - 1);
+                    updateMentionSelection();
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    mentionSelectedIndex = Math.max(mentionSelectedIndex - 1, 0);
+                    updateMentionSelection();
+                    return;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    selectMention(mentionSelectedIndex);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideMentionPopup();
+                    return;
+                }
+            }
+
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
@@ -3540,9 +4152,31 @@ function getScript(): string {
                 addMessage('user', '↪ ' + text);  // Arrow indicates injection
                 vscode.postMessage({ type: 'injectMessage', text });
             } else {
-                // Normal message send
-                addMessage('user', text);
-                vscode.postMessage({ type: 'sendMessage', text });
+                // Build message with attachments
+                let fullText = text;
+
+                // Prepend file references if any files attached
+                if (attachedFiles.length > 0) {
+                    const fileRefs = attachedFiles.map(f => '@' + f).join(' ');
+                    fullText = fileRefs + '\n\n' + text;
+                }
+
+                // Display with attachment indicator
+                const displayText = attachedFiles.length > 0
+                    ? '📎 ' + attachedFiles.length + ' file(s)\n' + text
+                    : text;
+                addMessage('user', displayText);
+
+                vscode.postMessage({
+                    type: 'sendMessage',
+                    text: fullText,
+                    files: attachedFiles.slice()
+                });
+
+                // Clear attachments after sending
+                attachedFiles = [];
+                attachedImages = [];
+                updateAttachments();
             }
 
             inputEl.value = '';
@@ -3557,16 +4191,43 @@ function getScript(): string {
         // Loading indicator functions
         let loadingIndicatorEl = null;
 
-        function showLoadingIndicator() {
+        function showLoadingIndicator(phase = 'thinking') {
             hideLoadingIndicator(); // Remove any existing
             loadingIndicatorEl = document.createElement('div');
             loadingIndicatorEl.className = 'loading-indicator';
             loadingIndicatorEl.id = 'loadingIndicator';
+            loadingIndicatorEl.dataset.phase = phase;
+
+            const phaseTexts = {
+                connecting: 'Connecting to Claude...',
+                thinking: 'Claude is thinking...',
+                writing: 'Claude is writing...',
+                tool: 'Executing tool...'
+            };
+
             loadingIndicatorEl.innerHTML =
-                '<div class="loading-dots"><span></span><span></span><span></span></div>' +
-                '<span>Claude is thinking...</span>';
+                '<span class="loading-icon"></span>' +
+                '<span class="loading-text">' + (phaseTexts[phase] || phaseTexts.thinking) + '</span>' +
+                '<div class="loading-status"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
             messagesEl.appendChild(loadingIndicatorEl);
             messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function updateLoadingPhase(phase) {
+            const indicator = document.getElementById('loadingIndicator');
+            if (indicator) {
+                indicator.dataset.phase = phase;
+                const phaseTexts = {
+                    connecting: 'Connecting to Claude...',
+                    thinking: 'Claude is thinking...',
+                    writing: 'Claude is writing...',
+                    tool: 'Executing tool...'
+                };
+                const textEl = indicator.querySelector('.loading-text');
+                if (textEl) {
+                    textEl.textContent = phaseTexts[phase] || phaseTexts.thinking;
+                }
+            }
         }
 
         function hideLoadingIndicator() {
@@ -3575,6 +4236,15 @@ function getScript(): string {
                 existing.remove();
             }
             loadingIndicatorEl = null;
+        }
+
+        // Ensure loading indicator is always at the bottom of messages
+        function moveLoadingIndicatorToBottom() {
+            const indicator = document.getElementById('loadingIndicator');
+            if (indicator && messagesEl.lastElementChild !== indicator) {
+                messagesEl.appendChild(indicator);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         }
 
         function addMessage(role, content) {
@@ -4154,6 +4824,7 @@ function getScript(): string {
             });
 
             messagesEl.appendChild(div);
+            moveLoadingIndicatorToBottom();
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -4164,27 +4835,45 @@ function getScript(): string {
 
             // Categorize error
             let errorType = 'Error';
+            let errorTypeClass = 'error';
             let errorIcon = '❌';
+            let suggestion = '';
+            let showRetry = false;
             let details = '';
 
             if (errorText.includes('rate limit') || errorText.includes('429')) {
                 errorType = 'Rate Limit';
+                errorTypeClass = 'rate-limit';
                 errorIcon = '⏳';
+                suggestion = 'Wait a moment before trying again. Consider using a simpler query.';
+                showRetry = true;
             } else if (errorText.includes('timeout') || errorText.includes('timed out')) {
                 errorType = 'Timeout';
+                errorTypeClass = 'timeout';
                 errorIcon = '⏱️';
+                suggestion = 'The request took too long. Try breaking your request into smaller parts.';
+                showRetry = true;
             } else if (errorText.includes('network') || errorText.includes('connection') || errorText.includes('ECONNREFUSED')) {
                 errorType = 'Network';
+                errorTypeClass = 'network';
                 errorIcon = '🌐';
+                suggestion = 'Check your internet connection. Make sure Claude CLI is properly installed.';
+                showRetry = true;
             } else if (errorText.includes('permission') || errorText.includes('denied') || errorText.includes('401') || errorText.includes('403')) {
                 errorType = 'Permission';
                 errorIcon = '🔒';
+                suggestion = 'Authentication required. Check your API key or login status.';
             } else if (errorText.includes('not found') || errorText.includes('404')) {
                 errorType = 'Not Found';
                 errorIcon = '🔍';
+                suggestion = 'The requested resource could not be found.';
             } else if (errorText.includes('validation') || errorText.includes('invalid')) {
                 errorType = 'Validation';
                 errorIcon = '⚠️';
+                suggestion = 'Check your input and try again.';
+            } else if (errorText.includes('cancelled') || errorText.includes('stopped')) {
+                errorType = 'Cancelled';
+                errorIcon = '🛑';
             }
 
             // Extract stack trace or additional details if present
@@ -4194,15 +4883,30 @@ function getScript(): string {
                 errorText = errorText.replace(stackMatch[0], '');
             }
 
-            div.innerHTML = '<div class="error-block">' +
+            const errorBlock = document.createElement('div');
+            errorBlock.className = 'error-block';
+            errorBlock.dataset.type = errorTypeClass;
+
+            errorBlock.innerHTML =
                 '<div class="error-header">' +
                     '<span class="error-icon">' + errorIcon + '</span>' +
                     '<span class="error-type">' + errorType + '</span>' +
                 '</div>' +
                 '<div class="error-message">' + escapeHtml(errorText) + '</div>' +
-                (details ? '<div class="error-details">' + escapeHtml(details) + '</div>' : '') +
-            '</div>';
+                (suggestion ? '<div class="error-suggestion">💡 ' + suggestion + '</div>' : '') +
+                (details ? '<div class="error-details">' + escapeHtml(details) + '</div>' : '');
 
+            if (showRetry) {
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'error-retry-btn';
+                retryBtn.textContent = '🔄 Retry';
+                retryBtn.addEventListener('click', () => {
+                    vscode.postMessage({ type: 'retryLastMessage' });
+                });
+                errorBlock.appendChild(retryBtn);
+            }
+
+            div.appendChild(errorBlock);
             messagesEl.appendChild(div);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
@@ -4250,12 +4954,51 @@ function getScript(): string {
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'tool-result' + (isError ? ' error' : '');
 
-                // Truncate long results
-                const maxLen = 2000;
-                const truncated = content.length > maxLen;
-                const displayContent = truncated ? content.substring(0, maxLen) + '\n... (truncated)' : content;
+                // Calculate content stats
+                const lines = content.split('\\n').length;
+                const chars = content.length;
+                const truncateThreshold = 2000;
+                const needsTruncation = chars > truncateThreshold;
 
-                resultDiv.innerHTML = '<pre class="tool-result-content">' + escapeHtml(displayContent) + '</pre>';
+                // Store full content for expansion
+                resultDiv.dataset.fullContent = content;
+
+                // Show truncated preview if content is long
+                const displayContent = needsTruncation
+                    ? content.substring(0, truncateThreshold)
+                    : content;
+
+                resultDiv.innerHTML =
+                    '<pre class="tool-result-content">' + escapeHtml(displayContent) + '</pre>' +
+                    (needsTruncation ?
+                        '<button class="tool-result-expand">' +
+                            '<span>📄</span>' +
+                            '<span>Show ' + (chars - truncateThreshold).toLocaleString() + ' more characters</span>' +
+                        '</button>' : '') +
+                    '<div class="tool-result-stats">' +
+                        '<span class="tool-result-stat">📊 ' + lines.toLocaleString() + ' lines</span>' +
+                        '<span class="tool-result-stat">📝 ' + chars.toLocaleString() + ' chars</span>' +
+                    '</div>';
+
+                // Add expand/collapse functionality
+                if (needsTruncation) {
+                    resultDiv.classList.add('collapsed');
+                    const expandBtn = resultDiv.querySelector('.tool-result-expand');
+                    expandBtn.addEventListener('click', function() {
+                        const isCollapsed = resultDiv.classList.contains('collapsed');
+                        if (isCollapsed) {
+                            // Show full content
+                            resultDiv.querySelector('.tool-result-content').textContent = resultDiv.dataset.fullContent;
+                            resultDiv.classList.remove('collapsed');
+                            this.querySelector('span:last-child').textContent = 'Show less';
+                        } else {
+                            // Show truncated content
+                            resultDiv.querySelector('.tool-result-content').textContent = displayContent;
+                            resultDiv.classList.add('collapsed');
+                            this.querySelector('span:last-child').textContent = 'Show ' + (chars - truncateThreshold).toLocaleString() + ' more characters';
+                        }
+                    });
+                }
 
                 const toolBlock = toolContainer.querySelector('.tool-block');
                 if (toolBlock) {
@@ -4309,11 +5052,11 @@ function getScript(): string {
                     addMessage('user', message.data);
                     break;
                 case 'output':
-                    hideLoadingIndicator(); // Claude started responding
+                    updateLoadingPhase('writing'); // Claude is responding, keep indicator but update phase
                     addMessage('assistant', message.data);
                     break;
                 case 'thinking':
-                    hideLoadingIndicator(); // Claude is showing thinking
+                    updateLoadingPhase('thinking'); // Claude is thinking
                     // REQ-012: Enhanced collapsible thinking display
                     addThinkingMessage(message.data);
                     break;
@@ -4327,7 +5070,7 @@ function getScript(): string {
                     if (isCurrentlyProcessing) {
                         inputContainerEl.classList.add('processing');
                         inputEl.placeholder = 'Type to inject message into conversation... (Escape to stop)';
-                        showLoadingIndicator();
+                        showLoadingIndicator('connecting');
                     } else {
                         inputContainerEl.classList.remove('processing');
                         inputEl.placeholder = 'Ask Draagon anything... (/ for commands, @ for files)';
@@ -4336,7 +5079,7 @@ function getScript(): string {
                     updateRouting(isCurrentlyProcessing ? 'standard' : 'idle');
                     break;
                 case 'toolUse':
-                    hideLoadingIndicator(); // Claude is using a tool
+                    updateLoadingPhase('tool'); // Claude is using a tool
                     // REQ-012: Enhanced collapsible tool use display
                     addToolUseMessage(message.data.toolName, message.data.toolInput, message.data.toolUseId);
                     break;
@@ -4394,6 +5137,9 @@ function getScript(): string {
                 case 'updateFiles':
                     allFiles = message.files || [];
                     renderFileList(allFiles);
+                    break;
+                case 'mentionItems':
+                    handleMentionItems(message.data);
                     break;
                 case 'updateCommands':
                     allCommands = message.commands || [];

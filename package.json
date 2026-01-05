@@ -2,7 +2,7 @@
   "name": "draagon-ai",
   "displayName": "Draagon AI",
   "description": "AI-powered coding assistant with intelligent multi-LLM routing, shared memory, and custom agents",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "publisher": "draagon",
   "license": "AGPL-3.0",
   "repository": {
@@ -190,6 +190,76 @@
         "command": "draagon.switchAccount",
         "title": "Switch Claude Account",
         "category": "Draagon"
+      },
+      {
+        "command": "draagon.runSecurityScanner",
+        "title": "Run Security Scanner",
+        "category": "Draagon Agents"
+      },
+      {
+        "command": "draagon.runTestGenerator",
+        "title": "Generate Tests for Current File",
+        "category": "Draagon Agents"
+      },
+      {
+        "command": "draagon.runPrReviewer",
+        "title": "Run PR Review",
+        "category": "Draagon Agents"
+      },
+      {
+        "command": "draagon.listAgents",
+        "title": "List Available Agents",
+        "category": "Draagon Agents"
+      },
+      {
+        "command": "draagon.viewPlans",
+        "title": "View Implementation Plans",
+        "category": "Draagon Plans"
+      },
+      {
+        "command": "draagon.executePlan",
+        "title": "Execute Plan",
+        "category": "Draagon Plans"
+      },
+      {
+        "command": "draagon.tagConversation",
+        "title": "Tag Conversation",
+        "category": "Draagon History"
+      },
+      {
+        "command": "draagon.filterByTag",
+        "title": "Filter Conversations by Tag",
+        "category": "Draagon History"
+      },
+      {
+        "command": "draagon.askAboutSelection",
+        "title": "Ask Draagon about this",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.explainCode",
+        "title": "Explain this code",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.generateTestsForSelection",
+        "title": "Generate tests for this",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.refactorCode",
+        "title": "Refactor this code",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.documentCode",
+        "title": "Document this code",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.findBugs",
+        "title": "Find bugs in this code",
+        "category": "Draagon"
       }
     ],
     "keybindings": [
@@ -262,6 +332,28 @@
           "type": "string",
           "default": "default",
           "description": "Claude model to use (default, sonnet, opus)"
+        },
+        "draagon.permissionMode": {
+          "type": "string",
+          "enum": ["bypassPermissions", "acceptEdits", "dontAsk", "default", "plan", "delegate"],
+          "default": "acceptEdits",
+          "description": "Permission mode for Claude tool execution. 'acceptEdits' auto-approves file edits (recommended). 'bypassPermissions' is full YOLO mode. Note: In headless mode, 'default' and 'plan' modes will cause tools to fail since there's no UI for prompts.",
+          "enumDescriptions": [
+            "YOLO mode - bypass ALL permission prompts, execute everything automatically",
+            "Auto-accept file edits (Edit/Write) but skip other dangerous operations (Recommended)",
+            "Skip unapproved tools silently without prompting (safe but may miss operations)",
+            "Default Claude behavior - prompts for each tool (⚠️ fails in headless mode)",
+            "Plan mode - shows plan before executing (⚠️ fails in headless mode)",
+            "Delegate permissions to another process (advanced)"
+          ]
+        },
+        "draagon.allowedTools": {
+          "type": "array",
+          "default": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "Bash", "Task", "TodoWrite", "WebSearch", "WebFetch", "NotebookEdit"],
+          "description": "Additional tools to allow (used with 'plan' or 'delegate' permission modes). See https://code.claude.com/docs/en/headless",
+          "items": {
+            "type": "string"
+          }
         },
         "draagon.routing.enabled": {
           "type": "boolean",
@@ -510,6 +602,12 @@
         }
       }
     },
+    "submenus": [
+      {
+        "id": "draagon.contextMenu",
+        "label": "Draagon AI"
+      }
+    ],
     "menus": {
       "commandPalette": [
         { "command": "draagon.openChat" },
@@ -532,18 +630,47 @@
       ],
       "editor/context": [
         {
+          "submenu": "draagon.contextMenu",
+          "group": "draagon@0",
+          "when": "editorHasSelection"
+        },
+        {
           "command": "draagon.openChatPanel",
-          "group": "draagon@0"
+          "group": "draagon@1"
+        }
+      ],
+      "draagon.contextMenu": [
+        {
+          "command": "draagon.askAboutSelection",
+          "group": "ask@1"
+        },
+        {
+          "command": "draagon.explainCode",
+          "group": "ask@2"
+        },
+        {
+          "command": "draagon.findBugs",
+          "group": "review@1"
         },
         {
           "command": "draagon.runCodeReview",
-          "group": "draagon@1",
-          "when": "editorHasSelection"
+          "group": "review@2"
         },
         {
           "command": "draagon.runSecurityScan",
-          "group": "draagon@2",
-          "when": "editorHasSelection"
+          "group": "review@3"
+        },
+        {
+          "command": "draagon.generateTestsForSelection",
+          "group": "generate@1"
+        },
+        {
+          "command": "draagon.refactorCode",
+          "group": "generate@2"
+        },
+        {
+          "command": "draagon.documentCode",
+          "group": "generate@3"
         }
       ],
       "explorer/context": [

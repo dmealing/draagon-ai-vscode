@@ -56,9 +56,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, WebviewMess
         private readonly _extensionUri: vscode.Uri,
         private readonly _context: vscode.ExtensionContext
     ) {
+        // Get version from extension manifest
+        const extension = vscode.extensions.getExtension('draagon.draagon-ai');
+        const version = extension?.packageJSON?.version || 'dev';
+
         // Initialize decomposed modules
         this._stateManager = new ChatStateManager();
-        this._webviewManager = new ChatWebviewManager(_extensionUri);
+        this._webviewManager = new ChatWebviewManager(_extensionUri, version);
         this._webviewManager.setMessageHandler(this);
 
         this._initializeServices();
@@ -259,6 +263,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, WebviewMess
             case 'showInfo':
                 vscode.window.showInformationMessage(message.message);
                 break;
+            case 'getMentionItems':
+                await this._sendMentionItems();
+                break;
+            case 'retryLastMessage':
+                await this._retryLastMessage();
+                break;
+            case 'setPermissionMode':
+                await this._setPermissionMode(message.mode);
+                break;
+            case 'attachImage':
+                await this._triggerImagePicker();
+                break;
         }
     }
 
@@ -307,6 +323,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, WebviewMess
             console.log('[ChatView] Already processing, returning early');
             return;
         }
+
+        // Store for retry functionality
+        this._stateManager.setLastUserMessage(text);
 
         this._stateManager.setProcessing(true);
         this.postMessage({ type: 'setProcessing', data: { isProcessing: true } });
@@ -574,6 +593,135 @@ Consider the above memories when responding.`;
         }
 
         this.postMessage({ type: 'updateFiles', files });
+    }
+
+    private async _sendMentionItems(): Promise<void> {
+        const files: { name: string; path: string }[] = [];
+        const functions: { name: string; file: string; line: number }[] = [];
+
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            // Get files
+            const pattern = new vscode.RelativePattern(workspaceFolders[0], '**/*.{ts,js,tsx,jsx,py,go,rs,java,c,cpp,h,hpp}');
+            const uris = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 200);
+
+            for (const uri of uris) {
+                const relativePath = vscode.workspace.asRelativePath(uri);
+                const name = relativePath.split('/').pop() || relativePath;
+                files.push({ name, path: relativePath });
+            }
+
+            // Get symbols (functions/classes) from open documents
+            for (const doc of vscode.workspace.textDocuments) {
+                if (doc.uri.scheme === 'file') {
+                    try {
+                        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+                            'vscode.executeDocumentSymbolProvider',
+                            doc.uri
+                        );
+                        if (symbols) {
+                            const relativePath = vscode.workspace.asRelativePath(doc.uri);
+                            this._extractSymbols(symbols, relativePath, functions);
+                        }
+                    } catch {
+                        // Symbol provider not available for this document
+                    }
+                }
+            }
+        }
+
+        this.postMessage({
+            type: 'mentionItems',
+            data: { files, functions }
+        });
+    }
+
+    private _extractSymbols(
+        symbols: vscode.DocumentSymbol[],
+        file: string,
+        result: { name: string; file: string; line: number }[]
+    ): void {
+        for (const symbol of symbols) {
+            if (
+                symbol.kind === vscode.SymbolKind.Function ||
+                symbol.kind === vscode.SymbolKind.Method ||
+                symbol.kind === vscode.SymbolKind.Class ||
+                symbol.kind === vscode.SymbolKind.Interface
+            ) {
+                result.push({
+                    name: symbol.name,
+                    file,
+                    line: symbol.range.start.line + 1
+                });
+            }
+            if (symbol.children) {
+                this._extractSymbols(symbol.children, file, result);
+            }
+        }
+    }
+
+    private async _retryLastMessage(): Promise<void> {
+        const lastMessage = this._stateManager.getLastUserMessage();
+        if (lastMessage) {
+            await this._handleUserMessage(lastMessage);
+        }
+    }
+
+    private async _setPermissionMode(mode: string): Promise<void> {
+        const config = vscode.workspace.getConfiguration('draagon');
+        await config.update('permissionMode', mode, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Permission mode set to: ${mode}`);
+    }
+
+    private async _triggerImagePicker(): Promise<void> {
+        const options: vscode.OpenDialogOptions = {
+            canSelectMany: false,
+            openLabel: 'Select Image',
+            filters: {
+                'Images': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
+            }
+        };
+
+        const fileUri = await vscode.window.showOpenDialog(options);
+        if (fileUri && fileUri[0]) {
+            const filePath = fileUri[0].fsPath;
+
+            // Read file and convert to base64
+            const data = fs.readFileSync(filePath);
+            const base64 = data.toString('base64');
+            const mimeType = this._getMimeType(filePath);
+
+            await this._handleImageDrop({
+                base64,
+                mimeType
+            });
+        }
+    }
+
+    private _getMimeType(filePath: string): string {
+        const ext = filePath.split('.').pop()?.toLowerCase();
+        const mimeTypes: Record<string, string> = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'bmp': 'image/bmp'
+        };
+        return mimeTypes[ext || ''] || 'image/png';
+    }
+
+    // ===== Public API for context menu commands =====
+
+    public async sendMessageToChat(text: string): Promise<void> {
+        // Ensure the chat panel is visible
+        this._webviewManager.openAsPanel();
+
+        // Small delay to ensure panel is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Send the message
+        await this._handleUserMessage(text);
     }
 
     // ===== Checkpoints =====

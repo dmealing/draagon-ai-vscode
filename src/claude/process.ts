@@ -50,9 +50,27 @@ export class ClaudeProcess extends EventEmitter {
             args.push('--resume', resumeSessionId);
         }
 
-        // Check for plan mode
-        if (this._config.get<boolean>('planMode.enabled', false)) {
-            args.push('--permission-mode', 'plan');
+        // Permission mode for tool execution
+        // In --print mode (headless), there's no interactive prompt for permissions
+        // Modes: bypassPermissions (YOLO), acceptEdits (recommended), dontAsk (safe)
+        // Note: 'default' and 'plan' modes will FAIL in headless mode - no UI for prompts
+        // See: https://code.claude.com/docs/en/headless
+        const permissionMode = this._config.get<string>('permissionMode', 'acceptEdits');
+
+        // Set permission mode based on configuration
+        // Options: "acceptEdits", "bypassPermissions", "default", "delegate", "dontAsk", "plan"
+        if (permissionMode && permissionMode !== 'default') {
+            args.push('--permission-mode', permissionMode);
+        }
+
+        // Additionally allow specific tools (useful with 'plan' or 'delegate' modes)
+        const allowedTools = this._config.get<string[]>('allowedTools', [
+            'Read', 'Write', 'Edit', 'MultiEdit',
+            'Glob', 'Grep', 'Bash', 'Task', 'TodoWrite',
+            'WebSearch', 'WebFetch', 'NotebookEdit'
+        ]);
+        if (allowedTools.length > 0) {
+            args.push('--allowedTools', allowedTools.join(','));
         }
 
         console.log('[Claude] Spawning process with args:', args);

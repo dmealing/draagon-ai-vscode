@@ -16,6 +16,7 @@ export class ChatStateManager {
     private _claudeSessionId?: string;  // Claude CLI session ID for --resume
     private _isProcessing: boolean = false;
     private _pendingDiffs: Map<string, { filePath: string; contentBefore: string }> = new Map();
+    private _lastUserMessage?: string;
 
     // Module references
     private _permissionManager?: PermissionManager;
@@ -59,6 +60,16 @@ export class ChatStateManager {
 
     public setClaudeSessionId(id: string | undefined): void {
         this._claudeSessionId = id;
+    }
+
+    // ===== Last User Message (for retry) =====
+
+    public getLastUserMessage(): string | undefined {
+        return this._lastUserMessage;
+    }
+
+    public setLastUserMessage(message: string): void {
+        this._lastUserMessage = message;
     }
 
     // ===== Image Attachments =====

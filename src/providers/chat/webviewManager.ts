@@ -18,7 +18,8 @@ export class ChatWebviewManager implements MessagePoster {
     private _messageHandler?: WebviewMessageHandler;
 
     constructor(
-        private readonly _extensionUri: vscode.Uri
+        private readonly _extensionUri: vscode.Uri,
+        private readonly _version?: string
     ) {}
 
     /**
@@ -75,7 +76,7 @@ export class ChatWebviewManager implements MessagePoster {
             }
         );
 
-        this._panel.webview.html = getWebviewContent(this._panel.webview, this._extensionUri);
+        this._panel.webview.html = getWebviewContent(this._panel.webview, this._extensionUri, this._version);
 
         // Dispose of any existing panel message handler
         if (this._panelMessageDisposable) {
@@ -115,7 +116,7 @@ export class ChatWebviewManager implements MessagePoster {
             localResourceRoots: [this._extensionUri]
         };
 
-        webviewView.webview.html = getWebviewContent(webviewView.webview, this._extensionUri);
+        webviewView.webview.html = getWebviewContent(webviewView.webview, this._extensionUri, this._version);
 
         // Dispose of any existing view message handler
         if (this._viewMessageDisposable) {

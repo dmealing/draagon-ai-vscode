@@ -21,6 +21,8 @@ import { TokenTracker } from './stats/tokenTracker';
 import { ConversationHistoryManager } from './history/manager';
 import { WslSupport } from './wsl/support';
 import { ThinkingModeManager } from './thinking/modes';
+import { AgentRegistry } from './agents/registry';
+import { PlanManager } from './plan/manager';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Draagon AI extension activating...');
@@ -52,6 +54,8 @@ export function activate(context: vscode.ExtensionContext) {
         const historyManager = new ConversationHistoryManager(context);
         const wslSupport = new WslSupport();
         const thinkingModeManager = new ThinkingModeManager(context);
+        const agentRegistry = new AgentRegistry(vscode.workspace.getConfiguration('draagon'));
+        const planManager = new PlanManager(context, vscode.workspace.getConfiguration('draagon'));
 
         // Register view providers
         context.subscriptions.push(
@@ -99,7 +103,10 @@ export function activate(context: vscode.ExtensionContext) {
             permissionManager,
             tokenTracker,
             historyManager,
-            thinkingModeManager
+            thinkingModeManager,
+            // New feature disposables
+            agentRegistry,
+            planManager
         );
 
         // Register commands
@@ -141,6 +148,69 @@ export function activate(context: vscode.ExtensionContext) {
                         filePath: editor.document.uri.fsPath,
                         language: editor.document.languageId
                     });
+                }
+            }),
+
+            // Context menu commands for code selection
+            vscode.commands.registerCommand('draagon.askAboutSelection', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const filePath = editor.document.uri.fsPath;
+                    const language = editor.document.languageId;
+                    const prompt = `Please explain and analyze this ${language} code from ${filePath}:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.explainCode', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const language = editor.document.languageId;
+                    const prompt = `Explain this ${language} code in detail. What does it do? How does it work? Are there any important patterns or concepts used?\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.generateTestsForSelection', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const filePath = editor.document.uri.fsPath;
+                    const language = editor.document.languageId;
+                    const prompt = `Generate comprehensive unit tests for this ${language} code from ${filePath}. Include edge cases and error handling:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.refactorCode', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const language = editor.document.languageId;
+                    const prompt = `Refactor this ${language} code to improve readability, maintainability, and performance. Explain your changes:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.documentCode', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const language = editor.document.languageId;
+                    const prompt = `Add comprehensive documentation to this ${language} code. Include JSDoc/docstrings, inline comments for complex logic, and type annotations where appropriate:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.findBugs', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && !editor.selection.isEmpty) {
+                    const code = editor.document.getText(editor.selection);
+                    const language = editor.document.languageId;
+                    const prompt = `Analyze this ${language} code for potential bugs, security vulnerabilities, edge cases, and logic errors. Be thorough:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    await chatProvider.sendMessageToChat(prompt);
                 }
             }),
 
@@ -570,7 +640,8 @@ export function activate(context: vscode.ExtensionContext) {
                 if (selected) {
                     const format = await vscode.window.showQuickPick([
                         { label: 'Markdown', value: 'md' },
-                        { label: 'JSON', value: 'json' }
+                        { label: 'JSON', value: 'json' },
+                        { label: 'HTML', value: 'html' }
                     ], { placeHolder: 'Select export format' });
 
                     if (format) {
@@ -580,17 +651,23 @@ export function activate(context: vscode.ExtensionContext) {
                         if (format.value === 'md') {
                             content = await historyManager.exportAsMarkdown(selected.id) || '';
                             ext = 'md';
+                        } else if (format.value === 'html') {
+                            content = await historyManager.exportAsHtml(selected.id) || '';
+                            ext = 'html';
                         } else {
-                            const conversation = await historyManager.getConversation(selected.id);
-                            content = conversation ? JSON.stringify(conversation, null, 2) : '';
+                            content = await historyManager.exportAsJson(selected.id) || '';
                             ext = 'json';
                         }
 
+                        const filters: Record<string, string[]> = {
+                            md: { 'Markdown': ['md'] },
+                            html: { 'HTML': ['html'] },
+                            json: { 'JSON': ['json'] }
+                        }[ext] as any;
+
                         const uri = await vscode.window.showSaveDialog({
                             defaultUri: vscode.Uri.file(`conversation-${selected.id}.${ext}`),
-                            filters: format.value === 'md'
-                                ? { 'Markdown': ['md'] }
-                                : { 'JSON': ['json'] }
+                            filters
                         });
 
                         if (uri) {
@@ -685,6 +762,261 @@ export function activate(context: vscode.ExtensionContext) {
                         vscode.window.showInformationMessage('Image attached');
                     } else {
                         vscode.window.showErrorMessage('Failed to attach image');
+                    }
+                }
+            }),
+
+            // New Agent Registry commands
+            vscode.commands.registerCommand('draagon.runSecurityScanner', async () => {
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage('No workspace folder open');
+                    return;
+                }
+
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Running Security Scan...',
+                    cancellable: false
+                }, async (progress) => {
+                    const result = await agentRegistry.executeAgent('security-scanner', {
+                        workspaceRoot,
+                        config: vscode.workspace.getConfiguration('draagon')
+                    });
+
+                    if (result.success) {
+                        const markdown = agentRegistry.formatResultAsMarkdown(result);
+                        const doc = await vscode.workspace.openTextDocument({
+                            content: markdown,
+                            language: 'markdown'
+                        });
+                        await vscode.window.showTextDocument(doc);
+                    } else {
+                        vscode.window.showErrorMessage(`Security scan failed: ${result.summary}`);
+                    }
+                });
+            }),
+
+            vscode.commands.registerCommand('draagon.runTestGenerator', async () => {
+                const editor = vscode.window.activeTextEditor;
+                if (!editor) {
+                    vscode.window.showErrorMessage('No file open');
+                    return;
+                }
+
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage('No workspace folder open');
+                    return;
+                }
+
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Generating Tests...',
+                    cancellable: false
+                }, async () => {
+                    const result = await agentRegistry.executeAgent('test-generator', {
+                        workspaceRoot,
+                        files: [editor.document.uri.fsPath],
+                        config: vscode.workspace.getConfiguration('draagon')
+                    });
+
+                    if (result.success) {
+                        const markdown = agentRegistry.formatResultAsMarkdown(result);
+                        const doc = await vscode.workspace.openTextDocument({
+                            content: markdown,
+                            language: 'markdown'
+                        });
+                        await vscode.window.showTextDocument(doc);
+                    } else {
+                        vscode.window.showErrorMessage(`Test generation failed: ${result.summary}`);
+                    }
+                });
+            }),
+
+            vscode.commands.registerCommand('draagon.runPrReviewer', async () => {
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage('No workspace folder open');
+                    return;
+                }
+
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Running PR Review...',
+                    cancellable: false
+                }, async () => {
+                    const result = await agentRegistry.executeAgent('pr-reviewer', {
+                        workspaceRoot,
+                        config: vscode.workspace.getConfiguration('draagon')
+                    });
+
+                    if (result.success) {
+                        const markdown = agentRegistry.formatResultAsMarkdown(result);
+                        const doc = await vscode.workspace.openTextDocument({
+                            content: markdown,
+                            language: 'markdown'
+                        });
+                        await vscode.window.showTextDocument(doc);
+                    } else {
+                        vscode.window.showErrorMessage(`PR review failed: ${result.summary}`);
+                    }
+                });
+            }),
+
+            vscode.commands.registerCommand('draagon.listAgents', async () => {
+                const agents = agentRegistry.getAgents();
+                const items = agents.map(a => ({
+                    label: `${a.enabled ? '$(check)' : '$(circle-slash)'} ${a.icon} ${a.name}`,
+                    description: a.description,
+                    agent: a
+                }));
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select an agent to run'
+                });
+
+                if (selected) {
+                    await vscode.commands.executeCommand(`draagon.run${selected.agent.id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
+                }
+            }),
+
+            // Plan Mode commands
+            vscode.commands.registerCommand('draagon.viewPlans', async () => {
+                const plans = planManager.getPlans();
+                if (plans.length === 0) {
+                    vscode.window.showInformationMessage('No plans yet. Plans are created when Claude generates implementation plans.');
+                    return;
+                }
+
+                const items = plans.map(p => ({
+                    label: `${p.status === 'completed' ? '$(check)' : p.status === 'executing' ? '$(sync~spin)' : '$(file-text)'} ${p.title}`,
+                    description: `${p.metadata.completedSteps}/${p.metadata.estimatedSteps} steps - ${p.status}`,
+                    detail: p.description,
+                    plan: p
+                }));
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a plan to view'
+                });
+
+                if (selected) {
+                    const markdown = planManager.formatPlanAsMarkdown(selected.plan);
+                    const doc = await vscode.workspace.openTextDocument({
+                        content: markdown,
+                        language: 'markdown'
+                    });
+                    await vscode.window.showTextDocument(doc);
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.executePlan', async () => {
+                const plans = planManager.getPlansByStatus('approved').concat(planManager.getPlansByStatus('draft'));
+                if (plans.length === 0) {
+                    vscode.window.showInformationMessage('No plans ready to execute');
+                    return;
+                }
+
+                const items = plans.map(p => ({
+                    label: p.title,
+                    description: `${p.metadata.estimatedSteps} steps - ${p.status}`,
+                    plan: p
+                }));
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a plan to execute'
+                });
+
+                if (selected) {
+                    const dryRun = await vscode.window.showQuickPick([
+                        { label: 'Execute for real', value: false },
+                        { label: 'Dry run (preview only)', value: true }
+                    ], { placeHolder: 'Execution mode' });
+
+                    if (dryRun) {
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: `Executing: ${selected.plan.title}`,
+                            cancellable: true
+                        }, async (progress, token) => {
+                            token.onCancellationRequested(() => {
+                                planManager.cancelExecution();
+                            });
+
+                            const result = await planManager.executePlan(selected.plan.id, {
+                                dryRun: dryRun.value,
+                                autoApprove: false
+                            });
+
+                            if (result?.success) {
+                                vscode.window.showInformationMessage(`Plan completed: ${result.stepsExecuted} steps executed`);
+                            } else {
+                                vscode.window.showWarningMessage(`Plan finished with ${result?.stepsFailed || 0} failures`);
+                            }
+                        });
+                    }
+                }
+            }),
+
+            // History tagging commands
+            vscode.commands.registerCommand('draagon.tagConversation', async () => {
+                const conversations = historyManager.getConversations();
+                const items = conversations.map(c => ({
+                    label: c.firstUserMessage.substring(0, 50) || c.id,
+                    description: c.tags?.join(', ') || 'No tags',
+                    id: c.id
+                }));
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select conversation to tag'
+                });
+
+                if (selected) {
+                    const existingTags = historyManager.getAllTags();
+                    const tagInput = await vscode.window.showInputBox({
+                        prompt: 'Enter tag name',
+                        placeHolder: existingTags.length > 0 ? `Existing: ${existingTags.join(', ')}` : 'e.g., bug-fix, feature, refactor'
+                    });
+
+                    if (tagInput) {
+                        await historyManager.addTag(selected.id, tagInput);
+                        vscode.window.showInformationMessage(`Tag "${tagInput}" added`);
+                    }
+                }
+            }),
+
+            vscode.commands.registerCommand('draagon.filterByTag', async () => {
+                const tags = historyManager.getAllTags();
+                if (tags.length === 0) {
+                    vscode.window.showInformationMessage('No tags yet. Use "Tag Conversation" to add tags.');
+                    return;
+                }
+
+                const selected = await vscode.window.showQuickPick(tags, {
+                    placeHolder: 'Select tag to filter by'
+                });
+
+                if (selected) {
+                    const conversations = historyManager.getConversationsByTag(selected);
+                    const items = conversations.map(c => ({
+                        label: c.firstUserMessage.substring(0, 50) || c.id,
+                        description: `${c.messageCount} messages`,
+                        id: c.id
+                    }));
+
+                    const conv = await vscode.window.showQuickPick(items, {
+                        placeHolder: `${conversations.length} conversations with tag "${selected}"`
+                    });
+
+                    if (conv) {
+                        const markdown = await historyManager.exportAsMarkdown(conv.id);
+                        if (markdown) {
+                            const doc = await vscode.workspace.openTextDocument({
+                                content: markdown,
+                                language: 'markdown'
+                            });
+                            await vscode.window.showTextDocument(doc);
+                        }
                     }
                 }
             }),
