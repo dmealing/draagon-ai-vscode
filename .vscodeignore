@@ -1,6 +1,9 @@
 .vscode/**
 .vscode-test/**
 src/**
+.env*
+**/.env*
+.claude/**
 out/test/**
 .gitignore
 .yarnrc

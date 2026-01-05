@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run compile:*)",
+      "Bash(npx vsce package --force)",
+      "Bash(code --list-extensions:*)",
+      "Bash(code --uninstall-extension:*)",
+      "Bash(code --install-extension:*)",
+      "Bash(npx vsce:*)",
+      "Bash(cat:*)"
+    ]
+  }
+}

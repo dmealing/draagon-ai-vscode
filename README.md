@@ -1,33 +1,69 @@
 # Draagon AI - VS Code Extension
 
-Beautiful AI-powered coding assistant with intelligent multi-LLM routing, shared memory, and custom agents.
+Beautiful AI-powered coding assistant that wraps Claude Code CLI with enhanced UI features, conversation history, thinking modes, and more.
 
 ## Features
 
-### 🎯 Intelligent Request Routing
-- **Fast queries** → Groq Llama-8B (~100ms, nearly free)
-- **Code tasks** → Claude Code CLI (full tool access)
-- **Deep reasoning** → Draagon AgentLoop (memory, learning)
-
-### 🧠 Shared Memory
-- Memories persist across sessions
-- Share context with Roxy and other Draagon apps
-- Learn from successful interactions
-- Belief reconciliation for conflicting info
-
-### 🤖 Custom AI Agents
-- Code Reviewer (Groq-powered)
-- Security Scanner
-- Documentation Generator
-- Test Writer
-- Create your own agents
-
 ### 💬 Full Claude Code Integration
 - All Claude Code tools available
-- File editing with diffs
+- File editing with inline diffs
 - Terminal commands
 - Interactive questions (AskUserQuestion)
 - Plan mode visualization
+- Session management and resume
+
+### 🧠 Thinking Modes
+- **Default** - Standard Claude response
+- **Think** - Enable extended thinking
+- **Think Hard** - More thorough reasoning
+- **Think Harder** - Deep analysis
+- **Ultrathink** - Maximum reasoning depth
+
+### 📜 Conversation History
+- Persistent conversation storage
+- Search across past conversations
+- Resume previous sessions
+- Export conversations
+
+### 🖼️ Image Support
+- Paste images directly into chat
+- Drag and drop images
+- Clipboard image support
+- Image preview and management
+
+### 🔒 Permission System
+- Fine-grained tool permissions
+- Session-based approvals
+- YOLO mode for trusted workflows
+- Safe tool allowlists
+
+### 💾 Automatic Checkpoints
+- Git-based checkpoint system
+- Restore to previous states
+- Auto-checkpoint before AI changes
+- Configurable retention
+
+### 🤖 Background Agents
+- Code review agent
+- Security scanner
+- PR review with parallel analysis
+- Custom agent definitions
+
+---
+
+## Coming Soon
+
+> The following features are planned for future releases via Draagon MCP integration:
+
+### 🎯 Multi-LLM Routing (Planned)
+- Fast queries → Groq fast-path routing
+- Deep reasoning → Draagon AgentLoop
+- Intelligent request classification
+
+### 🧠 Shared Memory (Planned)
+- Persistent memory across sessions
+- Context sharing with other Draagon apps
+- Learning from interactions
 
 ## Installation
 
@@ -46,20 +82,29 @@ code --install-extension draagon-ai-0.1.0.vsix
 
 ```json
 {
-  // Claude Code
+  // Claude Code CLI
   "draagon.claude.path": "claude",
   "draagon.claude.model": "default",
 
-  // Multi-LLM Routing
-  "draagon.routing.enabled": true,
-  "draagon.groq.apiKey": "gsk_xxx",
+  // Thinking Modes
+  "draagon.thinkingMode.default": "default",
+  "draagon.thinkingMode.showIndicator": true,
 
-  // Memory Integration
-  "draagon.memory.enabled": true,
-  "draagon.memory.serverCommand": "python -m draagon_ai.mcp.server",
+  // Conversation History
+  "draagon.history.enabled": true,
+  "draagon.history.maxConversations": 100,
 
-  // Custom Agents
-  "draagon.agents.custom": []
+  // Permissions
+  "draagon.permissions.yoloMode": false,
+  "draagon.permissions.safeTools": ["Read", "Glob", "Grep", "LS", "Task", "TodoRead"],
+
+  // Checkpoints
+  "draagon.backup.enabled": true,
+  "draagon.backup.autoCheckpoint": true,
+
+  // Background Agents
+  "draagon.agents.codeReview.enabled": true,
+  "draagon.agents.securityScan.enabled": true
 }
 ```
 
@@ -79,37 +124,38 @@ code --install-extension draagon-ai-0.1.0.vsix
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   Chat Panel    │  │  Memory Panel   │  │  Agent Panel    │ │
+│  │   Chat Panel    │  │  History View   │  │  Agent Panel    │ │
+│  │   (Webview)     │  │  (Tree View)    │  │  (Tree View)    │ │
 │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘ │
 │           │                    │                    │          │
 │           └────────────────────┼────────────────────┘          │
 │                                ▼                               │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │                   Request Router                         │  │
-│  │      Simple → Groq | Code → Claude | Complex → Draagon  │  │
+│  │                   Extension Core                          │  │
+│  │   Permissions | History | Checkpoints | Thinking Modes   │  │
 │  └─────────────────────────────────────────────────────────┘  │
-│                                │                               │
-│           ┌────────────────────┼────────────────────┐         │
-│           ▼                    ▼                    ▼         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐│
-│  │   Claude Code   │  │   Groq API      │  │  Draagon AI     ││
-│  │   CLI Process   │  │   (fast path)   │  │  AgentLoop      ││
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘│
 │                                │                               │
 │                                ▼                               │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │              Draagon Memory MCP Server                   │  │
-│  │    (shared with Roxy, mobile app, other extensions)      │  │
+│  │                   Claude Code CLI                         │  │
+│  │         stream-json output | All Claude tools            │  │
 │  └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  │
+│                      PLANNED (Coming Soon)                      │
+│  ┌─────────────────┐  ┌─────────────────┐                     │
+│  │   Groq Router   │  │  Draagon MCP    │                     │
+│  │  (fast-path)    │  │  (memory/AI)    │                     │
+│  └─────────────────┘  └─────────────────┘                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Requirements
 
-- VS Code 1.85.0+
-- Claude Code CLI installed (`npm install -g @anthropic-ai/claude-code`)
-- Groq API key (for fast-path routing)
-- Draagon AI (for memory and AgentLoop)
+- VS Code 1.96.0+
+- Claude Code CLI installed and authenticated (`npm install -g @anthropic-ai/claude-code`)
+
+> **Note:** Groq API and Draagon AI integrations are not required for core functionality. These are planned for future releases.
 
 ## Development
 

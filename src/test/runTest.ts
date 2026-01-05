@@ -10,13 +10,14 @@ async function main() {
         // The path to the test runner script
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
-        // Set environment variable to skip WSL prompt
-        process.env.DONT_PROMPT_WSL_INSTALL = '1';
+        // Log environment variables being passed
+        console.log('GROQ_API_KEY set:', !!process.env.GROQ_API_KEY);
+        console.log('E2E_REAL_CLAUDE:', process.env.E2E_REAL_CLAUDE || 'not set');
 
         // Download VS Code if needed
         const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 
-        // Get the CLI path (bin/code) and default args
+        // Get the CLI path and default args
         const [cliPath, ...defaultArgs] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 
         console.log('Using CLI path:', cliPath);
@@ -33,29 +34,22 @@ async function main() {
         console.log('Running with args:', args.join('\n  '));
         console.log('\n--- Test Output ---\n');
 
-        // Spawn the CLI
+        // Build the environment - include GROQ_API_KEY and E2E_REAL_CLAUDE
+        const env = { ...process.env };
+
+        // Spawn the CLI with piped output to ensure we see test results
         const child = cp.spawn(cliPath, args, {
             stdio: ['inherit', 'pipe', 'pipe'],
-            env: {
-                ...process.env,
-                DONT_PROMPT_WSL_INSTALL: '1',
-                VSCODE_CLI: '1'
-            }
+            env
         });
 
-        let stdout = '';
-        let stderr = '';
-
+        // Forward stdout and stderr
         child.stdout?.on('data', (data) => {
-            const str = data.toString();
-            stdout += str;
-            process.stdout.write(str);
+            process.stdout.write(data);
         });
 
         child.stderr?.on('data', (data) => {
-            const str = data.toString();
-            stderr += str;
-            process.stderr.write(str);
+            process.stderr.write(data);
         });
 
         const exitCode = await new Promise<number>((resolve) => {
@@ -68,9 +62,6 @@ async function main() {
 
         if (exitCode !== 0) {
             console.error('Tests failed with exit code:', exitCode);
-            if (stderr) {
-                console.error('Stderr:', stderr);
-            }
             process.exit(exitCode);
         }
 

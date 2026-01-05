@@ -2,7 +2,7 @@
   "name": "draagon-ai",
   "displayName": "Draagon AI",
   "description": "AI-powered coding assistant with intelligent multi-LLM routing, shared memory, and custom agents",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "draagon",
   "license": "AGPL-3.0",
   "repository": {
@@ -10,7 +10,7 @@
     "url": "https://github.com/Draagon/draagon-ai"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Programming Languages",
@@ -35,6 +35,15 @@
         "command": "draagon.openChat",
         "title": "Open Draagon Chat",
         "category": "Draagon"
+      },
+      {
+        "command": "draagon.openChatPanel",
+        "title": "Open Draagon Chat Panel",
+        "category": "Draagon",
+        "icon": {
+          "light": "resources/icon.svg",
+          "dark": "resources/icon.svg"
+        }
       },
       {
         "command": "draagon.newSession",
@@ -120,6 +129,67 @@
         "command": "draagon.importFigmaDesign",
         "title": "Import Figma Design",
         "category": "Draagon"
+      },
+      {
+        "command": "draagon.managePermissions",
+        "title": "Manage Permissions",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.showTokenUsage",
+        "title": "Show Token Usage",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.viewHistory",
+        "title": "View Conversation History",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.searchHistory",
+        "title": "Search Conversation History",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.exportHistory",
+        "title": "Export Conversation",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.configureWsl",
+        "title": "Configure WSL",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.selectThinkingMode",
+        "title": "Select Thinking Mode",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.cycleThinkingMode",
+        "title": "Cycle Thinking Mode",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.attachImage",
+        "title": "Attach Image",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.refreshAccount",
+        "title": "Refresh Account Info",
+        "category": "Draagon",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "draagon.authenticateClaude",
+        "title": "Authenticate with Claude",
+        "category": "Draagon"
+      },
+      {
+        "command": "draagon.switchAccount",
+        "title": "Switch Claude Account",
+        "category": "Draagon"
       }
     ],
     "keybindings": [
@@ -132,6 +202,21 @@
         "command": "draagon.runCodeReview",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r"
+      },
+      {
+        "command": "draagon.cycleThinkingMode",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
+      },
+      {
+        "command": "draagon.viewHistory",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h"
+      },
+      {
+        "command": "draagon.attachImage",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i"
       }
     ],
     "viewsContainers": {
@@ -147,16 +232,21 @@
       "draagon": [
         {
           "type": "webview",
-          "id": "draagon.chatView",
-          "name": "Chat"
+          "id": "draagon.accountView",
+          "name": "Account",
+          "icon": "resources/icon.svg"
         },
         {
+          "type": "tree",
           "id": "draagon.agentsView",
-          "name": "Agents"
+          "name": "Agents",
+          "icon": "resources/icon.svg"
         },
         {
+          "type": "tree",
           "id": "draagon.memoryView",
-          "name": "Memory"
+          "name": "Memory",
+          "icon": "resources/icon.svg"
         }
       ]
     },
@@ -176,32 +266,44 @@
         "draagon.routing.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable intelligent multi-LLM request routing"
+          "description": "[Coming Soon] Multi-LLM routing is not yet available",
+          "markdownDeprecationMessage": "**Coming Soon** - Multi-LLM routing will be available in a future release via Draagon MCP."
         },
         "draagon.groq.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Groq API key for fast-path routing"
+          "description": "[Coming Soon] Groq integration is not yet available",
+          "markdownDeprecationMessage": "**Coming Soon** - Groq fast-path routing will be available in a future release."
         },
         "draagon.groq.model": {
           "type": "string",
           "default": "llama-3.1-8b-instant",
-          "description": "Groq model for fast queries"
+          "description": "[Coming Soon] Groq model selection is not yet available",
+          "markdownDeprecationMessage": "**Coming Soon** - Groq model selection will be available in a future release."
         },
         "draagon.memory.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Draagon Memory integration"
+          "description": "[Coming Soon] Draagon Memory integration is not yet available",
+          "markdownDeprecationMessage": "**Coming Soon** - Memory integration will be available via Draagon MCP in a future release."
+        },
+        "draagon.memory.endpoint": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "[Coming Soon] Memory server endpoint",
+          "markdownDeprecationMessage": "**Coming Soon** - Memory server will be available in a future release."
         },
         "draagon.memory.serverCommand": {
           "type": "string",
           "default": "python -m draagon_ai.mcp.server",
-          "description": "Command to start Memory MCP server"
+          "description": "[Coming Soon] Memory MCP server command",
+          "markdownDeprecationMessage": "**Coming Soon** - Memory MCP server will be available in a future release."
         },
         "draagon.memory.autoContext": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically include relevant memories in context"
+          "description": "[Coming Soon] Auto-context from memory is not yet available",
+          "markdownDeprecationMessage": "**Coming Soon** - Memory auto-context will be available in a future release."
         },
         "draagon.agents.codeReview.enabled": {
           "type": "boolean",
@@ -319,11 +421,120 @@
           "type": "array",
           "default": ["security", "error-handling", "type-safety"],
           "description": "Default agents to run for PR review"
+        },
+        "draagon.permissions.yoloMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-approve all tool executions (use with caution)"
+        },
+        "draagon.permissions.safeTools": {
+          "type": "array",
+          "default": ["Read", "Glob", "Grep", "LS", "Task", "TodoRead"],
+          "description": "Tools that don't require permission"
+        },
+        "draagon.history.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable conversation history storage"
+        },
+        "draagon.history.maxConversations": {
+          "type": "number",
+          "default": 100,
+          "minimum": 10,
+          "maximum": 1000,
+          "description": "Maximum number of conversations to store"
+        },
+        "draagon.history.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save conversations"
+        },
+        "draagon.wsl.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run Claude CLI via WSL (Windows only)"
+        },
+        "draagon.wsl.distro": {
+          "type": "string",
+          "default": "Ubuntu",
+          "description": "WSL distribution to use"
+        },
+        "draagon.wsl.claudePath": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to Claude CLI in WSL"
+        },
+        "draagon.wsl.nodePath": {
+          "type": "string",
+          "default": "node",
+          "description": "Path to Node.js in WSL"
+        },
+        "draagon.thinkingMode.default": {
+          "type": "string",
+          "enum": ["default", "think", "thinkHard", "thinkHarder", "ultrathink"],
+          "default": "default",
+          "description": "Default thinking intensity mode"
+        },
+        "draagon.thinkingMode.showIndicator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show thinking mode in status bar"
+        },
+        "draagon.images.maxSize": {
+          "type": "number",
+          "default": 10485760,
+          "description": "Maximum image size in bytes (default 10MB)"
+        },
+        "draagon.images.retentionDays": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 365,
+          "description": "Number of days to keep stored images"
+        },
+        "draagon.tokens.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show token usage in status bar"
+        },
+        "draagon.tokens.showCost": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show cost estimates alongside token counts"
+        },
+        "draagon.diff.colorScheme": {
+          "type": "string",
+          "enum": ["default", "github", "monokai"],
+          "default": "default",
+          "description": "Color scheme for diff display"
         }
       }
     },
     "menus": {
+      "commandPalette": [
+        { "command": "draagon.openChat" },
+        { "command": "draagon.openChatPanel" },
+        { "command": "draagon.newSession" }
+      ],
+      "editor/title": [
+        {
+          "command": "draagon.openChatPanel",
+          "group": "navigation",
+          "when": "true"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "draagon.openChatPanel",
+          "group": "navigation",
+          "when": "true"
+        }
+      ],
       "editor/context": [
+        {
+          "command": "draagon.openChatPanel",
+          "group": "draagon@0"
+        },
         {
           "command": "draagon.runCodeReview",
           "group": "draagon@1",
@@ -333,6 +544,19 @@
           "command": "draagon.runSecurityScan",
           "group": "draagon@2",
           "when": "editorHasSelection"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "draagon.openChatPanel",
+          "group": "draagon@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "draagon.refreshAccount",
+          "when": "view == draagon.accountView",
+          "group": "navigation"
         }
       ]
     }

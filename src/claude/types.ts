@@ -1,10 +1,37 @@
 // Claude Code CLI message types
+// The CLI with --output-format stream-json emits various event types
 
 export interface ClaudeMessage {
-    type: 'assistant' | 'user' | 'system' | 'result';
+    type: 'assistant' | 'user' | 'system' | 'result' | 'error' |
+          'content_block_start' | 'content_block_delta' | 'content_block_stop' |
+          'message_start' | 'message_delta' | 'message_stop';
     message?: AssistantMessage;
     tool_use_id?: string;
     content?: string;
+    session_id?: string;
+    usage?: TokenUsage;
+    // Streaming delta fields
+    index?: number;
+    delta?: ContentDelta;
+    content_block?: ContentBlock;
+    error?: {
+        message: string;
+        code?: string;
+    };
+}
+
+export interface TokenUsage {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+}
+
+export interface ContentDelta {
+    type: 'text_delta' | 'thinking_delta' | 'input_json_delta';
+    text?: string;
+    thinking?: string;
+    partial_json?: string;
 }
 
 export interface AssistantMessage {
@@ -17,11 +44,16 @@ export interface AssistantMessage {
     stop_sequence: string | null;
 }
 
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+export type ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock;
 
 export interface TextBlock {
     type: 'text';
     text: string;
+}
+
+export interface ThinkingBlock {
+    type: 'thinking';
+    thinking: string;
 }
 
 export interface ToolUseBlock {
