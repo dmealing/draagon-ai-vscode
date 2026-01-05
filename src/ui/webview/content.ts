@@ -108,8 +108,8 @@ export function getWebviewContent(
                 <div class="toolbar-right">
                     <div class="permission-wrapper" style="position: relative;">
                         <button class="toolbar-btn permission-btn" id="permissionBtn" title="Permission Mode" data-mode="acceptEdits">
-                            <span class="permission-icon" id="permissionIcon">🛡️</span>
-                            <span class="permission-label" id="permissionLabel">Safe</span>
+                            <span class="permission-icon" id="permissionBtnIcon">🛡️</span>
+                            <span class="permission-label" id="permissionBtnLabel">Safe</span>
                         </button>
                         <div class="permission-dropdown" id="permissionDropdown">
                             <div class="permission-option" data-mode="acceptEdits">
@@ -2945,8 +2945,8 @@ function getScript(): string {
         const imageBtn = document.getElementById('imageBtn');
         const permissionBtn = document.getElementById('permissionBtn');
         const permissionDropdown = document.getElementById('permissionDropdown');
-        const permissionIcon = document.getElementById('permissionIcon');
-        const permissionLabel = document.getElementById('permissionLabel');
+        const permissionBtnIcon = document.getElementById('permissionBtnIcon');
+        const permissionBtnLabel = document.getElementById('permissionBtnLabel');
         const planModeToggle = document.getElementById('planModeToggle');
         const thinkingModeToggle = document.getElementById('thinkingModeToggle');
         const thinkingModeLabel = document.getElementById('thinkingModeLabel');
@@ -3633,8 +3633,8 @@ function getScript(): string {
             };
 
             const config = modes[mode] || modes.acceptEdits;
-            permissionIcon.textContent = config.icon;
-            permissionLabel.textContent = config.label;
+            permissionBtnIcon.textContent = config.icon;
+            permissionBtnLabel.textContent = config.label;
 
             // Update selected state in dropdown
             permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
