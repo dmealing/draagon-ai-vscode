@@ -2998,17 +2998,21 @@ function getScript(): string {
         const inputContainer = document.querySelector('.input-container');
         let selectedPattern = null;
 
-        // Checkpoint panel toggle
-        checkpointBtn.addEventListener('click', () => {
-            checkpointPanel.classList.toggle('hidden');
-            if (!checkpointPanel.classList.contains('hidden')) {
-                vscode.postMessage({ type: 'getCheckpoints' });
-            }
-        });
+        // Checkpoint panel toggle (with null checks)
+        if (checkpointBtn && checkpointPanel) {
+            checkpointBtn.addEventListener('click', () => {
+                checkpointPanel.classList.toggle('hidden');
+                if (!checkpointPanel.classList.contains('hidden')) {
+                    vscode.postMessage({ type: 'getCheckpoints' });
+                }
+            });
+        }
 
-        closeCheckpoints.addEventListener('click', () => {
-            checkpointPanel.classList.add('hidden');
-        });
+        if (closeCheckpoints && checkpointPanel) {
+            closeCheckpoints.addEventListener('click', () => {
+                checkpointPanel.classList.add('hidden');
+            });
+        }
 
         function updateCheckpoints(data) {
             checkpoints = data.checkpoints || [];
@@ -3206,77 +3210,84 @@ function getScript(): string {
             }
         }
 
-        // Deny button
-        permissionDeny.addEventListener('click', () => {
-            if (currentPermissionRequest) {
-                vscode.postMessage({
-                    type: 'permissionResponse',
-                    data: {
-                        requestId: currentPermissionRequest.requestId,
-                        allowed: false
-                    }
-                });
-            }
-            permissionDialog.classList.add('hidden');
-            currentPermissionRequest = null;
-        });
-
-        // Allow Once button
-        permissionAllowOnce.addEventListener('click', () => {
-            if (currentPermissionRequest) {
-                vscode.postMessage({
-                    type: 'permissionResponse',
-                    data: {
-                        requestId: currentPermissionRequest.requestId,
-                        allowed: true,
-                        scope: 'once'
-                    }
-                });
-            }
-            permissionDialog.classList.add('hidden');
-            currentPermissionRequest = null;
-        });
-
-        // Always Allow button (with selected pattern)
-        permissionAllowAlways.addEventListener('click', () => {
-            if (currentPermissionRequest) {
-                vscode.postMessage({
-                    type: 'permissionResponse',
-                    data: {
-                        requestId: currentPermissionRequest.requestId,
-                        allowed: true,
-                        alwaysAllow: true,
-                        pattern: selectedPattern || '*'
-                    }
-                });
-            }
-            permissionDialog.classList.add('hidden');
-            currentPermissionRequest = null;
-        });
-
-        // YOLO Mode button
-        permissionYolo.addEventListener('click', () => {
-            yoloWarning.classList.remove('hidden');
-        });
-
-        // YOLO Cancel
-        yoloCancelBtn.addEventListener('click', () => {
-            yoloWarning.classList.add('hidden');
-        });
-
-        // YOLO Confirm
-        yoloConfirmBtn.addEventListener('click', () => {
-            vscode.postMessage({
-                type: 'permissionResponse',
-                data: {
-                    requestId: currentPermissionRequest?.requestId,
-                    allowed: true,
-                    enableYolo: true
+        // Permission dialog button handlers (with null checks)
+        if (permissionDeny && permissionDialog) {
+            permissionDeny.addEventListener('click', () => {
+                if (currentPermissionRequest) {
+                    vscode.postMessage({
+                        type: 'permissionResponse',
+                        data: {
+                            requestId: currentPermissionRequest.requestId,
+                            allowed: false
+                        }
+                    });
                 }
+                permissionDialog.classList.add('hidden');
+                currentPermissionRequest = null;
             });
-            permissionDialog.classList.add('hidden');
-            currentPermissionRequest = null;
-        });
+        }
+
+        if (permissionAllowOnce && permissionDialog) {
+            permissionAllowOnce.addEventListener('click', () => {
+                if (currentPermissionRequest) {
+                    vscode.postMessage({
+                        type: 'permissionResponse',
+                        data: {
+                            requestId: currentPermissionRequest.requestId,
+                            allowed: true,
+                            scope: 'once'
+                        }
+                    });
+                }
+                permissionDialog.classList.add('hidden');
+                currentPermissionRequest = null;
+            });
+        }
+
+        if (permissionAllowAlways && permissionDialog) {
+            permissionAllowAlways.addEventListener('click', () => {
+                if (currentPermissionRequest) {
+                    vscode.postMessage({
+                        type: 'permissionResponse',
+                        data: {
+                            requestId: currentPermissionRequest.requestId,
+                            allowed: true,
+                            alwaysAllow: true,
+                            pattern: selectedPattern || '*'
+                        }
+                    });
+                }
+                permissionDialog.classList.add('hidden');
+                currentPermissionRequest = null;
+            });
+        }
+
+        if (permissionYolo && yoloWarning) {
+            permissionYolo.addEventListener('click', () => {
+                yoloWarning.classList.remove('hidden');
+            });
+        }
+
+        if (yoloCancelBtn && yoloWarning) {
+            yoloCancelBtn.addEventListener('click', () => {
+                yoloWarning.classList.add('hidden');
+            });
+        }
+
+        if (yoloConfirmBtn && permissionDialog) {
+            yoloConfirmBtn.addEventListener('click', () => {
+                vscode.postMessage({
+                    type: 'permissionResponse',
+                    data: {
+                        requestId: currentPermissionRequest?.requestId,
+                        allowed: true,
+                        enableYolo: true
+                    }
+                });
+                permissionDialog.classList.add('hidden');
+                currentPermissionRequest = null;
+            });
+        }
 
         // ═══════════════════════════════════════════
         // REQ-002: Diff Rendering
@@ -3329,41 +3340,43 @@ function getScript(): string {
         window.openDiff = openDiff;
 
         // ═══════════════════════════════════════════
-        // REQ-003: Image Drag-Drop and Paste
+        // REQ-003: Image Drag-Drop and Paste (with null checks)
         // ═══════════════════════════════════════════
-        inputContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            inputContainer.classList.add('drag-over');
-        });
+        if (inputContainer) {
+            inputContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                inputContainer.classList.add('drag-over');
+            });
 
-        inputContainer.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            inputContainer.classList.remove('drag-over');
-        });
+            inputContainer.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                inputContainer.classList.remove('drag-over');
+            });
 
-        inputContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            inputContainer.classList.remove('drag-over');
+            inputContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                inputContainer.classList.remove('drag-over');
 
-            const files = e.dataTransfer.files;
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        vscode.postMessage({
-                            type: 'imageDropped',
-                            data: {
-                                name: file.name,
-                                base64: reader.result,
-                                mimeType: file.type
-                            }
-                        });
-                    };
-                    reader.readAsDataURL(file);
+                const files = e.dataTransfer.files;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            vscode.postMessage({
+                                type: 'imageDropped',
+                                data: {
+                                    name: file.name,
+                                    base64: reader.result,
+                                    mimeType: file.type
+                                }
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Paste handler for images
         document.addEventListener('paste', (e) => {
@@ -3461,18 +3474,20 @@ function getScript(): string {
             vscode.postMessage({ type: 'compactContext' });
         }
 
-        // Context usage button click handler
-        contextUsageBtn.addEventListener('click', () => {
-            if (currentContextUsage < 20) {
-                // Don't compact if context usage is low
-                vscode.postMessage({
-                    type: 'showInfo',
-                    message: 'Context usage is low (' + currentContextUsage + '%). Compaction not needed.'
-                });
-                return;
-            }
-            requestCompactContext();
-        });
+        // Context usage button click handler (with null check)
+        if (contextUsageBtn) {
+            contextUsageBtn.addEventListener('click', () => {
+                if (currentContextUsage < 20) {
+                    // Don't compact if context usage is low
+                    vscode.postMessage({
+                        type: 'showInfo',
+                        message: 'Context usage is low (' + currentContextUsage + '%). Compaction not needed.'
+                    });
+                    return;
+                }
+                requestCompactContext();
+            });
+        }
 
         // ═══════════════════════════════════════════
         // REQ-005: History with Date Grouping
@@ -3563,68 +3578,88 @@ function getScript(): string {
         }
 
         // ═══════════════════════════════════════════
-        // Header button handlers
+        // Header button handlers (with null checks)
         // ═══════════════════════════════════════════
-        newChatBtn.addEventListener('click', () => {
-            vscode.postMessage({ type: 'newSession' });
-        });
-
-        historyBtn.addEventListener('click', () => {
-            historyModal.classList.remove('hidden');
-            vscode.postMessage({ type: 'getHistory' });
-        });
-
-        settingsBtn.addEventListener('click', () => {
-            settingsModal.classList.remove('hidden');
-        });
-
-        // ═══════════════════════════════════════════
-        // Toolbar button handlers
-        // ═══════════════════════════════════════════
-        modelSelectBtn.addEventListener('click', () => {
-            modelModal.classList.remove('hidden');
-            updateModelSelection();
-        });
-
-        slashCmdBtn.addEventListener('click', () => {
-            slashModal.classList.remove('hidden');
-            vscode.postMessage({ type: 'getCommands' });
-        });
-
-        filePickerBtn.addEventListener('click', () => {
-            fileModal.classList.remove('hidden');
-            vscode.postMessage({ type: 'getFiles' });
-        });
-
-        imageBtn.addEventListener('click', () => {
-            vscode.postMessage({ type: 'attachImage' });
-        });
-
-        // Permission mode toggle
-        permissionBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            permissionDropdown.classList.toggle('visible');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!permissionBtn.contains(e.target) && !permissionDropdown.contains(e.target)) {
-                permissionDropdown.classList.remove('visible');
-            }
-        });
-
-        // Permission option selection
-        permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
-            opt.addEventListener('click', () => {
-                const mode = opt.dataset.mode;
-                setPermissionMode(mode);
-                permissionDropdown.classList.remove('visible');
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                vscode.postMessage({ type: 'newSession' });
             });
-        });
+        }
+
+        if (historyBtn && historyModal) {
+            historyBtn.addEventListener('click', () => {
+                historyModal.classList.remove('hidden');
+                vscode.postMessage({ type: 'getHistory' });
+            });
+        }
+
+        if (settingsBtn && settingsModal) {
+            settingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('hidden');
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // Toolbar button handlers (with null checks)
+        // ═══════════════════════════════════════════
+        if (modelSelectBtn && modelModal) {
+            modelSelectBtn.addEventListener('click', () => {
+                modelModal.classList.remove('hidden');
+                updateModelSelection();
+            });
+        }
+
+        if (slashCmdBtn && slashModal) {
+            slashCmdBtn.addEventListener('click', () => {
+                slashModal.classList.remove('hidden');
+                vscode.postMessage({ type: 'getCommands' });
+            });
+        }
+
+        if (filePickerBtn && fileModal) {
+            filePickerBtn.addEventListener('click', () => {
+                fileModal.classList.remove('hidden');
+                vscode.postMessage({ type: 'getFiles' });
+            });
+        }
+
+        if (imageBtn) {
+            imageBtn.addEventListener('click', () => {
+                vscode.postMessage({ type: 'attachImage' });
+            });
+        }
+
+        // Permission mode toggle (with null checks)
+        if (permissionBtn && permissionDropdown) {
+            permissionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                permissionDropdown.classList.toggle('visible');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (permissionBtn && permissionDropdown) {
+                    if (!permissionBtn.contains(e.target) && !permissionDropdown.contains(e.target)) {
+                        permissionDropdown.classList.remove('visible');
+                    }
+                }
+            });
+
+            // Permission option selection
+            permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const mode = opt.dataset.mode;
+                    setPermissionMode(mode);
+                    permissionDropdown.classList.remove('visible');
+                });
+            });
+        }
 
         function setPermissionMode(mode) {
             currentPermissionMode = mode;
-            permissionBtn.dataset.mode = mode;
+            if (permissionBtn) {
+                permissionBtn.dataset.mode = mode;
+            }
 
             const modes = {
                 'acceptEdits': { icon: '🛡️', label: 'Safe' },
@@ -3633,13 +3668,19 @@ function getScript(): string {
             };
 
             const config = modes[mode] || modes.acceptEdits;
-            permissionBtnIcon.textContent = config.icon;
-            permissionBtnLabel.textContent = config.label;
+            if (permissionBtnIcon) {
+                permissionBtnIcon.textContent = config.icon;
+            }
+            if (permissionBtnLabel) {
+                permissionBtnLabel.textContent = config.label;
+            }
 
             // Update selected state in dropdown
-            permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
-                opt.classList.toggle('selected', opt.dataset.mode === mode);
-            });
+            if (permissionDropdown) {
+                permissionDropdown.querySelectorAll('.permission-option').forEach(opt => {
+                    opt.classList.toggle('selected', opt.dataset.mode === mode);
+                });
+            }
 
             // Send to extension
             vscode.postMessage({ type: 'setPermissionMode', mode: mode });
@@ -3648,16 +3689,20 @@ function getScript(): string {
         // Initialize permission mode display
         setPermissionMode(currentPermissionMode);
 
-        planModeToggle.addEventListener('click', () => {
-            planModeActive = !planModeActive;
-            planModeToggle.classList.toggle('active', planModeActive);
-            vscode.postMessage({ type: 'setPlanMode', active: planModeActive });
-        });
+        if (planModeToggle) {
+            planModeToggle.addEventListener('click', () => {
+                planModeActive = !planModeActive;
+                planModeToggle.classList.toggle('active', planModeActive);
+                vscode.postMessage({ type: 'setPlanMode', active: planModeActive });
+            });
+        }
 
-        thinkingModeToggle.addEventListener('click', () => {
-            thinkingModal.classList.remove('hidden');
-            updateThinkingSelection();
-        });
+        if (thinkingModeToggle && thinkingModal) {
+            thinkingModeToggle.addEventListener('click', () => {
+                thinkingModal.classList.remove('hidden');
+                updateThinkingSelection();
+            });
+        }
 
         // ═══════════════════════════════════════════
         // Modal handlers
@@ -3896,12 +3941,14 @@ function getScript(): string {
             });
         }
 
-        // Settings modal
+        // Settings modal (with null check)
         const openVSCodeSettings = document.getElementById('openVSCodeSettings');
-        openVSCodeSettings.addEventListener('click', () => {
-            vscode.postMessage({ type: 'openSettings' });
-            settingsModal.classList.add('hidden');
-        });
+        if (openVSCodeSettings && settingsModal) {
+            openVSCodeSettings.addEventListener('click', () => {
+                vscode.postMessage({ type: 'openSettings' });
+                settingsModal.classList.add('hidden');
+            });
+        }
 
         // ═══════════════════════════════════════════
         // Input handling with slash and @ detection
@@ -4140,8 +4187,12 @@ function getScript(): string {
             }
         });
 
-        sendBtn.addEventListener('click', sendMessage);
-        stopBtn.addEventListener('click', stopProcessing);
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', stopProcessing);
+        }
 
         function sendMessage() {
             const text = inputEl.value.trim();
@@ -4158,12 +4209,12 @@ function getScript(): string {
                 // Prepend file references if any files attached
                 if (attachedFiles.length > 0) {
                     const fileRefs = attachedFiles.map(f => '@' + f).join(' ');
-                    fullText = fileRefs + '\n\n' + text;
+                    fullText = fileRefs + '\\n\\n' + text;
                 }
 
                 // Display with attachment indicator
                 const displayText = attachedFiles.length > 0
-                    ? '📎 ' + attachedFiles.length + ' file(s)\n' + text
+                    ? '📎 ' + attachedFiles.length + ' file(s)\\n' + text
                     : text;
                 addMessage('user', displayText);
 
@@ -4680,28 +4731,30 @@ function getScript(): string {
             });
         }
 
-        submitAnswer.addEventListener('click', () => {
-            const otherOpt = questionOptions.querySelector('.other-option');
-            const hasOther = otherOpt && otherOpt.classList.contains('selected') && otherText.trim();
+        if (submitAnswer && questionPanel) {
+            submitAnswer.addEventListener('click', () => {
+                const otherOpt = questionOptions.querySelector('.other-option');
+                const hasOther = otherOpt && otherOpt.classList.contains('selected') && otherText.trim();
 
-            if (selectedOptions.length === 0 && !hasOther) return;
+                if (selectedOptions.length === 0 && !hasOther) return;
 
-            let answers = selectedOptions.map(i => currentQuestion.options[i].label);
+                let answers = selectedOptions.map(i => currentQuestion.options[i].label);
 
-            // Add "Other" answer if selected
-            if (hasOther) {
-                answers.push('Other: ' + otherText.trim());
-            }
+                // Add "Other" answer if selected
+                if (hasOther) {
+                    answers.push('Other: ' + otherText.trim());
+                }
 
-            vscode.postMessage({
-                type: 'answerQuestion',
-                toolUseId: currentQuestion.toolUseId,
-                answers: currentQuestion.multiSelect ? answers : answers[0]
+                vscode.postMessage({
+                    type: 'answerQuestion',
+                    toolUseId: currentQuestion.toolUseId,
+                    answers: currentQuestion.multiSelect ? answers : answers[0]
+                });
+
+                questionPanel.classList.add('hidden');
+                currentQuestion = null;
             });
-
-            questionPanel.classList.add('hidden');
-            currentQuestion = null;
-        });
+        }
 
         function updateRouting(tier) {
             const dot = routingIndicator.querySelector('.indicator-dot');

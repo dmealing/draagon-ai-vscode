@@ -2,7 +2,7 @@
   "name": "draagon-ai",
   "displayName": "Draagon AI",
   "description": "AI-powered coding assistant with intelligent multi-LLM routing, shared memory, and custom agents",
-  "version": "0.3.2",
+  "version": "0.3.6",
   "publisher": "draagon",
   "license": "AGPL-3.0",
   "repository": {
