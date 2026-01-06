@@ -2141,11 +2141,22 @@ function getStyles(): string {
         }
 
         .thinking-icon {
-            font-size: 18px;
+            font-size: 24px;
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .thinking-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .thinking-name {
             font-weight: 500;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
         }
 
         .thinking-desc {
